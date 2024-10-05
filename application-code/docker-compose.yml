@@ -1,0 +1,41 @@
+version: '3.8'
+
+services:
+  webtier:
+    build: ./web-tier
+    ports:
+      - "8080:80"
+    depends_on:
+      - apptier
+    networks:
+      - app-network
+
+  apptier:
+    build: ./app-tier
+    ports:
+      - "4000:4000"  # Updated port mapping
+    environment:
+      - DB_HOST=db
+      - DB_PORT=3306
+      - DB_USER=root
+      - DB_PASSWORD=student12
+      - DB_NAME=STUDENTS
+    networks:
+      - app-network
+
+  db:
+    image: mariadb:latest
+    environment:
+      MYSQL_ROOT_PASSWORD: student12
+      MYSQL_DATABASE: STUDENTS
+    networks:
+      - app-network
+    volumes:
+      - db_data:/var/lib/mysql
+
+networks:
+  app-network:
+    driver: bridge
+
+volumes:
+  db_data:
