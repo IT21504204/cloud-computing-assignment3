@@ -1,30 +1,42 @@
 const dbcreds = require('./DbConfig');
 const mysql = require('mysql');
 
-// Establish MySQL connection
+// Establish MySQL connection without specifying the database initially
 const con = mysql.createConnection({
     host: dbcreds.DB_HOST,
     user: dbcreds.DB_USER,
-    password: dbcreds.DB_PWD,
-    database: dbcreds.DB_DATABASE
+    password: dbcreds.DB_PWD
 });
 
-// Ensure table is created if it doesn't exist
+// Ensure database and table are created if they don't exist
 con.connect(function (err) {
     if (err) throw err;
-    console.log("Connected to the database!");
+    console.log("Connected to the MySQL server!");
 
-    // Create table if it doesn't exist
-    const createTableQuery = `
-        CREATE TABLE IF NOT EXISTS transactions (
-            id INT AUTO_INCREMENT PRIMARY KEY,
-            amount DECIMAL(10, 2) NOT NULL,
-            description VARCHAR(255) NOT NULL
-        );
-    `;
-    con.query(createTableQuery, function (err, result) {
+    // Create database if it doesn't exist
+    const createDbQuery = `CREATE DATABASE IF NOT EXISTS ${dbcreds.DB_DATABASE}`;
+    con.query(createDbQuery, function (err, result) {
         if (err) throw err;
-        console.log("Transactions table is ready or already exists.");
+        console.log(`Database ${dbcreds.DB_DATABASE} is ready or already exists.`);
+
+        // Switch connection to use the database
+        con.changeUser({ database: dbcreds.DB_DATABASE }, function (err) {
+            if (err) throw err;
+            console.log(`Using database: ${dbcreds.DB_DATABASE}`);
+
+            // Create table if it doesn't exist
+            const createTableQuery = `
+                CREATE TABLE IF NOT EXISTS transactions (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    amount DECIMAL(10, 2) NOT NULL,
+                    description VARCHAR(255) NOT NULL
+                );
+            `;
+            con.query(createTableQuery, function (err, result) {
+                if (err) throw err;
+                console.log("Transactions table is ready or already exists.");
+            });
+        });
     });
 });
 
@@ -128,7 +140,6 @@ function deleteTransactionById(id, callback) {
     });
 }
 
-
 /**
  * Deletes all transactions from the database.
  * @param {function} callback - Callback to handle the result.
@@ -142,20 +153,6 @@ function deleteAllTransactions(callback) {
     });
 }
 
-/**
- * Deletes a transaction by ID.
- * @param {number} id - The ID of the transaction to delete.
- * @param {function} callback - Callback to handle the result.
- */
-function deleteTransactionById(id, callback) {
-    const mysqlQuery = `DELETE FROM transactions WHERE id = ?`;
-    con.query(mysqlQuery, [id], function (err, result) {
-        if (err) throw err;
-        console.log(`Deleted transaction with ID ${id}`);
-        return callback(result);
-    });
-}
-
 // Export the functions
 module.exports = {
     addTransaction,
@@ -165,4 +162,3 @@ module.exports = {
     deleteTransactionById,
     updateTransactionById
 };
-

@@ -2,6 +2,7 @@ const transactionService = require('./TransactionService');  // Ensure you're im
 const express = require('express');
 const bodyParser = require('body-parser');
 const cors = require('cors');
+const fetch = require('node-fetch');
 
 const app = express();
 const port = 4000;
@@ -125,17 +126,25 @@ app.delete('/transaction/:id', (req, res) => {
 
 app.get('/instance-id', async (req, res) => {
     try {
-        const token = await fetch('http://169.254.169.254/latest/api/token', {
+        // Fetch the token
+        const tokenResponse = await fetch('http://169.254.169.254/latest/api/token', {
             method: 'PUT',
             headers: { 'X-aws-ec2-metadata-token-ttl-seconds': '21600' }
-        }).then(res => res.text());
+        });
 
-        const instanceId = await fetch('http://169.254.169.254/latest/meta-data/instance-id', {
+        const token = await tokenResponse.text();
+
+        // Fetch the instance ID using the token
+        const instanceIdResponse = await fetch('http://169.254.169.254/latest/meta-data/instance-id', {
             headers: { 'X-aws-ec2-metadata-token': token }
-        }).then(res => res.text());
+        });
 
+        const instanceId = await instanceIdResponse.text();
+
+        // Respond with the instance ID
         res.json({ instanceId });
     } catch (error) {
+        // Handle any errors
         res.status(500).json({ error: 'Not running in EC2 or unable to fetch instance ID' });
     }
 });
